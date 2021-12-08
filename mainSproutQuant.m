@@ -12,8 +12,8 @@ addpath('functions')
 prompt = {'Enter the image folder','Enter the image resolution (microns/pixel)','Enter the gaussian filter size (pixels)','Enter the estimated sprout size (pixels)'};
 dlgtitle = 'Input';
 dims = [1 35];
-definput = {'C:\Users\Nicolas\Dropbox (Biophotonics)\In Vivo CLaP\Sample images for sprout quant','15','5'};
-answer = inputdlg(prompt,dlgtitle,dims,definput)
+definput = {'C:\Users\Nicolas\Dropbox (Biophotonics)\In Vivo CLaP\Sample images for sprout quant','','15','5'};
+answer = inputdlg(prompt,dlgtitle,dims,definput);
 
 imFolder = answer{1};
 imRes = str2num(answer{2});
@@ -29,7 +29,8 @@ end
 imFiles = dir(fullfile(imFolder,'*.tif'));
 resultTable = [];
 
-for idx = 1:numel(imFiles)
+% for idx = 1:numel(imFiles)
+for idx =1:2
     t = imFiles(idx).name;
     V = tiffreadVolume(fullfile(imFolder,t));
     I = mat2gray(max(V,[],3)); % max projection
@@ -124,20 +125,29 @@ for idx = 1:numel(imFiles)
         sproutsProps(iProps).Image = t;
     end
     
-    resultTable = [resultTable; struct2table(sproutsProps)];
+    
+    resultTableOneIm = struct2table(sproutsProps);
+    % convert from pixels to microns
+    resultTableOneIm.Length = resultTableOneIm.Length*imRes;
+    resultTableOneIm = removevars(resultTableOneIm,{'PixelList','Image'});
+    resultTable = [resultTable; resultTableOneIm];
+    
+    resultTableSummary(idx).Image = t;
+    resultTableSummary(idx).Mean_Length = mean(resultTableOneIm.Length,'omitnan');
+    resultTableSummary(idx).Std_Length = std(resultTableOneIm.Length,'omitnan');
+    resultTableSummary(idx).n_sprouts = length(resultTableOneIm.Length);
+   
+    writetable(resultTableOneIm,fullfile(resultFolder,'results.xlsx'),'Sheet',t)
+    
     resultImage = uint8(cat(3,Ihisteq+contourDist1+roughContour,Ihisteq+sproutLocs,Ihisteq+imdilate(sprouts,strel('disk',1)))*255);
     sproutImage = uint8(cat(3,Ihisteq+contourDist1+roughContour,Ihisteq+skeleton,Ihisteq+imdilate(sprouts,strel('disk',1)))*255);
     imwrite(resultImage,fullfile(resultFolder,strrep(t,'.tif','-result.tif')))
     imwrite(sproutImage,fullfile(resultFolder,strrep(t,'.tif','-sprouts.tif')))
 end
 
-% convert from pixels to microns
-resultTable.Length = resultTable.Length*imRes;
 
 % save data
 save(fullfile(resultFolder,'results.mat'),'resultTable')
-resultTable = removevars(resultTable,{'PixelList'});
-resultTable = movevars(resultTable,{'Image','Length'},'before',1);
-writetable(resultTable,fullfile(resultFolder,'results.xlsx'))
+writetable(struct2table(resultTableSummary),fullfile(resultFolder,'results.xlsx'),'Sheet','Summary')
 
 
