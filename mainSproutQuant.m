@@ -35,7 +35,7 @@ for idx =1:2
     V = tiffreadVolume(fullfile(imFolder,t));
     I = mat2gray(max(V,[],3)); % max projection
     Ihisteq = adapthisteq(I); %
-    Ihighpass = imgaussfilt(Ihisteq,1)-imgaussfilt(Ihisteq,sproutSize);
+    Ihighpass = imgaussfilt(Ihisteq,1)-imboxfilt(Ihisteq,sproutSize*2+1) ;
     
     % finds skeleton
     mask = imbinarize(Ihighpass,'adapt');
@@ -47,6 +47,7 @@ for idx =1:2
     % finds contours
     roughMask = imbinarize(imgaussfilt(Ihisteq,gaussFiltSize));
     roughMask = imerode(roughMask,strel('disk',round(gaussFiltSize/2)));
+    roughMask = imfill(roughMask,'holes');
     roughContour = bwperim(roughMask);
     contourDist1 = imdilate(roughMask,strel('disk',10));
     contourDist1 = bwperim(contourDist1);
