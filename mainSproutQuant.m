@@ -29,8 +29,7 @@ end
 imFiles = dir(fullfile(imFolder,'*.tif'));
 resultTable = [];
 
-% for idx = 1:numel(imFiles)
-for idx =1:2
+for idx = 1:numel(imFiles)
     t = imFiles(idx).name;
     V = tiffreadVolume(fullfile(imFolder,t));
     I = mat2gray(max(V,[],3)); % max projection
